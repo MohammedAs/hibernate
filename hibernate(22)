@@ -1,0 +1,349 @@
+22. Collection Mapping One-to-Many  Relationship Using a Map With String Key
+
+Department
+
+package example.jpa;
+
+
+import java.util.Map;
+
+import javax.persistence.*;
+/*
+ * Many-to-One relation between Employee & Department. Map of cubicle-Employee.
+ * Join table is explicitly required. Key is of basic type and value is entity.
+ */
+
+@Entity
+public class Department {
+
+	@Id private int id;
+	private String name;
+	@OneToMany//(mappedBy="department")
+
+	@MapKeyColumn(name="CUB_ID")
+	private Map<String,Employee> employeesByCubicle;
+	
+	public Department() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+
+
+	public Department(int id, String name) {
+		super();
+		this.id = id;
+		this.name = name;
+	}
+
+
+	public String getName() {
+		return name;
+	}
+
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+
+	public int getId() {
+		return id;
+	}
+
+
+	public Map<String,Employee> getEmployeesByCubicle() {
+		return employeesByCubicle;
+	}
+
+
+	public void setEmployeesByCubicle(Map<String,Employee> employees) {
+		this.employeesByCubicle = employees;
+	}
+
+
+	@Override
+	public String toString() {
+		return "Department [employeesByCubicle=" + employeesByCubicle + ", id="
+				+ id + ", name=" + name + "]";
+	}
+}
+
+
+
+
+
+
+
+
+Employee
+
+
+package example.jpa;
+/* One-to-Many relationship between Employee & Department. Many Employees can be there in one Department. 
+ * Refer to Department class. 
+ */
+
+import javax.persistence.*;
+@Entity
+public class Employee {
+
+	@Id private int id;
+	private String name;
+	private int salary;
+	@ManyToOne
+	private Department department;
+	public Employee(){}
+
+	public Employee(int id){
+		this.id=id;	
+	}
+
+	public int getId() {
+		return id;
+	}
+
+	public void setId(int id) {
+		this.id = id;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public int getSalary() {
+		return salary;
+	}
+
+	public void setSalary(int salary) {
+		this.salary = salary;
+	}
+
+	
+	public Department getDepartment() {
+		return department;
+	}
+
+	public void setDepartment(Department department) {
+		this.department = department;
+	}
+	
+	@Override
+	public String toString() {
+		return "Employee [id=" + id + ", name="
+				+ name + ", salary=" + salary + "]";
+	}
+	
+}
+
+
+
+
+
+
+
+EmployeeService
+
+package example.jpa;
+import javax.persistence.*;
+
+
+import java.util.List;
+import java.util.Map;
+public class EmployeeService {
+
+	protected EntityManager em;
+	
+	public EmployeeService(EntityManager em){
+		this.em=em;
+	}
+	
+	public Employee createEmployee(int id,String name,int salary, Department department){
+		
+		Employee emp = new Employee(id);
+		emp.setName(name);
+		emp.setSalary(salary);
+		em.persist(emp);
+		return emp;
+	}
+	
+	public void removeEmployee(int id){
+		Employee emp = findEmployee(id);
+		if(emp !=null){
+			em.remove(emp);
+		}
+	}
+
+	public Employee raiseEmployeeSalary(int id, int raise){
+		Employee emp = findEmployee(id);
+		if(emp !=null){
+			emp.setSalary(emp.getSalary()+raise);
+		}
+		return emp;
+	}
+	
+	public List<Employee> findAllEmployees(){
+		TypedQuery<Employee> query = em.createQuery("Select e from Employee e",Employee.class);
+		return query.getResultList();
+		
+	}
+	public Employee findEmployee(int id) {
+		// TODO Auto-generated method stub
+		return em.find(Employee.class, id);
+	}
+	
+	public Department createDepartment(int id, String name, Map<String,Employee>employeeByCubicle){
+			Department dept = new Department(id,name);
+			dept.setEmployeesByCubicle(employeeByCubicle);
+			em.persist(dept);
+			
+			return dept;
+	}
+
+	public Department setEmployeesOnDepartment(int id, Map<String,Employee>employees){
+		Department dept = findDepartment(id);
+		dept.setEmployeesByCubicle(employees);
+		return dept;
+	}
+	public Department findDepartment(int id){
+			return em.find(Department.class, id);
+	}
+	
+	public Employee setDepartmentOnEmployee(int id,Department d){
+		Employee e = findEmployee(id);
+		if(e != null){
+			e.setDepartment(d);
+		}
+		return e;
+	}
+	public List<Department> findAllDepartments(){
+		TypedQuery<Department> query = em.createQuery("Select d from Department d",Department.class);
+		return query.getResultList();
+	}
+}
+
+
+
+
+
+EmployeeTest
+
+
+package example.jpa;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Map;
+
+import javax.persistence.*;
+
+
+public class EmployeeTest {
+
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) {
+		// TODO Auto-generated method stub
+			
+		
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory("hello");
+		
+		EntityManager em = emf.createEntityManager();
+		EmployeeService service = new EmployeeService(em);
+
+		em.getTransaction().begin();
+			service.createEmployee(50948, "Sagar", 60000,new Department());
+			service.createEmployee(50949, "Renu", 90000, new Department());
+			service.createEmployee(50950, "Mrudula", 80000,new Department());
+		em.getTransaction().commit();
+		
+
+		em.getTransaction().begin();
+		
+			Map<String,Employee> empMap1 = new Hashtable<String,Employee>();
+			empMap1.put("100", service.findEmployee(50948));
+			empMap1.put("200", service.findEmployee(50949));
+			
+			Map<String,Employee> empMap2 = new Hashtable<String,Employee>();
+			empMap2.put("300", service.findEmployee(50950));
+	
+			service.createDepartment(1, "Timepass", empMap1);
+			service.createDepartment(2, "Housekeeping",empMap2);
+		em.getTransaction().commit();
+		
+		em.getTransaction().begin();
+			service.setDepartmentOnEmployee(50948, service.findDepartment(1));
+			service.setDepartmentOnEmployee(50949, service.findDepartment(1));
+			service.setDepartmentOnEmployee(50950, service.findDepartment(2));
+		em.getTransaction().commit();
+		
+		List<Employee> emps = service.findAllEmployees();
+				for(Employee e : emps){
+			System.out.println("All employees :: "+e);
+		}
+		
+		List<Department> depts = service.findAllDepartments();
+		
+		for(Department d : depts){
+			System.out.println("All departments :: "+d);
+		}
+		em.getTransaction().begin();
+			service.raiseEmployeeSalary(50948, 10000);
+		em.getTransaction().commit();
+		em.close();
+		emf.close();
+		
+
+	}
+
+}
+
+/*		dept1 = service.findDepartment(1);
+dept2 = service.findDepartment(2);
+*/		
+/*		empMap1.put("100",emp1);
+empMap1.put("200",emp2);
+
+
+empMap2.put("300",emp3);
+*/		
+//service.setEmployeesOnDepartment(1, empMap1);
+//service.setEmployeesOnDepartment(2, empMap2);
+
+
+
+
+EmployeeTest2
+
+
+package example.jpa;
+
+import java.util.List;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.Persistence;
+
+public class EmployeeTest2 {
+
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) {
+		// TODO Auto-generated method stub
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory("hello");
+		
+		EntityManager em = emf.createEntityManager();
+		EmployeeService service = new EmployeeService(em);
+		List<Department> depts = service.findAllDepartments();
+		
+		for(Department d : depts){
+			System.out.println("All departments :: "+d);
+		}
+
+	}
+
+}
