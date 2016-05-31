@@ -1,0 +1,372 @@
+21. Collection Mapping- Maps- Keying By Basic Type
+
+persistence
+
+<persistence xmlns="http://java.sun.com/xml/ns/persistence"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://java.sun.com.xml/ns/persistence http://java.sun.com/xml/ns/persistence_2_0.xsd"
+	 version="2.0">
+	<persistence-unit name="hello">
+
+		<provider>org.hibernate.ejb.HibernatePersistence</provider>
+		<properties>
+			<property name="hibernate.archive.autodetection"
+				value="class" />
+			<property name="hibernate.format_sql" value="true"/>
+			<property name="hibernate.connection.driver_class" value="com.mysql.jdbc.Driver"/>
+			<property name="hibernate.connection.url" value="jdbc:mysql://localhost:3306/JPA2"/>
+			<property name="hibernate.connection.username" value="root"/>
+			<property name="hibernate.connection.password" value="password"/>
+			<property name="hibernate.dialect" value="org.hibernate.dialect.MySQLDialect"/>
+			<property name="show_sql" value="true"/>
+			<property name="hibernate.hbm2ddl.auto" value="create"/>
+		</properties>
+	</persistence-unit>
+</persistence>
+
+
+
+
+
+
+
+
+
+Employee
+
+package example.jpa;
+
+
+/*When the keys are basic or embeddable types, 
+they are stored directly in the table being referred to.
+
+
+ * Depending upon type of mapping, it can be either target entity table,
+ join table, or collection table. 
+ 
+
+* However when keys are entities, only the foreign keys are stored in the 
+table because entities are stored in their own tables.
+
+ * 
+ 
+* It is always the type of the value object in the Map that 
+determines what kind of mapping must be used. If the values are entities,
+ 
+ * the Map must be mapped as a one-to-many or many-to-many relationship,
+ whereas if the values of the Map are either embeddable or basic types,
+ 
+* the Map is mapped as element collection.
+ * 
+ 
+
+* In this case as the value is basic type @ElementCollection annotation is used */
+
+
+
+import java.util.Map;
+
+
+import javax.persistence.*;
+
+@Entity
+public class Employee 
+{
+
+	
+	@Id 
+	private int id;
+	
+	private String name;
+	
+	private int salary;
+	
+	@ElementCollection
+	
+	@MapKeyColumn(name="Phone_Type")
+	
+	private Map<String , String> phoneNumbers;
+	
+	
+	public Employee()
+	{
+	}
+
+
+	
+	public Employee(int id)
+	{
+		
+		this.id=id;	
+	
+	}
+
+	
+
+	public int getId() 
+	{
+		
+		return id;
+	
+	}
+
+	
+
+	public void setId(int id) 
+	{
+		
+		this.id = id;
+	
+	}
+
+	
+
+	public String getName() 
+	{
+		
+		return name;
+	
+	}
+
+	
+
+	public void setName(String name) 
+	{
+		
+		this.name = name;
+	
+	}
+
+	
+
+	public int getSalary() 
+	{
+		
+		return salary;
+	
+	}
+
+	
+
+	public void setSalary(int salary) 
+	{
+		
+		this.salary = salary;
+	
+	}
+
+	
+
+	public Map<String, String> getPhoneNumbers() 
+	{
+		
+		return phoneNumbers;
+	
+	}
+
+	
+
+	public void setPhoneNumbers(Map<String, String> phoneNumbers) 
+	{
+		
+		this.phoneNumbers = phoneNumbers;
+	
+	}
+
+	
+
+	@Override
+	
+	public String toString() 
+	{
+		
+		return "Employee [id=" + id + ", name=" + name + ", phoneNumbers="
+				
+			
+			+ phoneNumbers + ", salary=" + salary + "]";
+	
+	}
+	
+
+}
+
+
+
+
+
+
+
+
+EmployeeService
+
+
+package example.jpa;
+
+import javax.persistence.*;
+
+import java.util.List;
+
+import java.util.Map;
+
+public class EmployeeService 
+{
+
+	
+	protected EntityManager em;
+	
+	
+	public EmployeeService(EntityManager em)
+	{
+		
+		this.em=em;
+	
+	}
+
+	
+	
+	public Employee createEmployee(int id,String name,int salary, Map<String,String>phoneNumbers)
+	{
+		
+		
+		Employee emp = new Employee(id);
+		
+		emp.setName(name);
+		
+		emp.setSalary(salary);
+		
+		emp.setPhoneNumbers(phoneNumbers);
+		
+		em.persist(emp);
+		
+		return emp;
+	
+	}
+
+	
+	
+	public void removeEmployee(int id)
+	{
+		
+		Employee emp = findEmployee(id);
+		
+		if(emp !=null)
+		{
+			
+			em.remove(emp);
+		
+		}
+	
+	}
+
+	
+	public Employee raiseEmployeeSalary(int id, int raise)
+	{
+		
+		Employee emp = findEmployee(id);
+		
+		if(emp !=null)
+		{
+			
+			emp.setSalary(emp.getSalary()+raise);
+		
+		}
+		
+		return emp;
+	
+		}
+	
+	
+		public List<Employee> findAllEmployees()
+		{
+		
+			TypedQuery<Employee> query = em.createQuery("Select e from Employee e",Employee.class);
+		
+			return query.getResultList();
+		
+	
+		}
+	
+		public Employee findEmployee(int id) 
+		{
+		
+			// TODO Auto-generated method stub
+		
+			return em.find(Employee.class, id);
+	
+		}
+
+}
+
+
+
+
+
+
+
+
+
+EmployeeTest
+
+package example.jpa;
+
+
+import java.util.HashMap;
+
+import java.util.Map;
+
+
+import javax.persistence.*;
+
+
+
+public class EmployeeTest 
+{
+
+	
+	/**
+	 * @param args
+	 */
+	
+	public static void main(String[] args) 
+	{
+		
+		// TODO Auto-generated method stub
+
+			
+		
+		
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory("hello");
+		
+		
+		EntityManager em = emf.createEntityManager();
+		
+		EmployeeService service = new EmployeeService(em);
+		
+		em.getTransaction().begin();
+		
+		Map<String,String> phoneNumbers = new HashMap<String,String>();
+		
+		phoneNumbers.put("Home", "020-24283484");
+		
+		phoneNumbers.put("Work", "020-40102000");
+		
+		phoneNumbers.put("Mobile", "9850276767");
+		
+		service.createEmployee(50948, "Sagar", 60000, phoneNumbers);
+		
+		em.getTransaction().commit();
+		
+		Employee emp = service.findEmployee(50948);
+		
+		System.out.println(emp);
+		
+		
+		em.close();
+		
+		emf.close();
+	
+	}
+
+
+}
+
